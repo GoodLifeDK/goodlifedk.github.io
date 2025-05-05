@@ -63,7 +63,7 @@
     <script>
         document.addEventListener("adobe_dc_view_sdk.ready", function() {
             const ADOBE_API_KEY = "1dd7a7f322144b23bdf3db1cfd7f2b69"; // Replace with your Adobe PDF Embed API key
-            const PDF_FILE_URL = "document.pdf"; // Replace with your PDF file path
+            const PDF_FILE_URL = "goodlife.pdf"; // Replace with your PDF file path
             
             // Initialize Adobe DC View
             const adobeDCView = new AdobeDC.View({
@@ -82,7 +82,8 @@
                 showFullScreen: true,
                 showLeftHandPanel: true,
                 dockPageControls: true,
-                defaultViewMode: "FIT_PAGE"
+                defaultViewMode: "FIT_PAGE",
+                renderMode: "SINGLE_COLUMN" // Shows page breaks between pages
             });
         });
     </script>
