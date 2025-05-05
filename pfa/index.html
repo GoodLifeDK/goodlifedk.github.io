@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Fit‑height PDF viewer</title>
+  <title>A4 fit‑height PDF viewer</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
     html,body{margin:0;height:100%;background:#f0f0f0;font-family:system-ui,sans-serif;}
-    #pdf-container{max-width:100%;margin:auto;padding:24px 0;}
-    .page{margin:24px auto;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.15);}
+    body{display:flex;justify-content:center;}      /* centre the column */
+    #pdf-container{padding:24px 0;display:flex;flex-direction:column;align-items:center;}
+    .page{margin:24px 0;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.15);}
     canvas{width:100%;height:auto;display:block;}
   </style>
 </head>
@@ -20,47 +21,43 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    /** Preferred minimum height for a page (px) */
-    const MIN_PAGE_HEIGHT = 700;
+    const VERTICAL_GUTTER = 24 /*pad top*/ + 24 /*pad bottom*/ + 24 /*page top*/ + 24 /*page bottom*/; // 96 px
+    const MIN_PAGE_HEIGHT = 700;  // don’t let pages get tiny
 
-    /** Returns the scale so a page’s height fills the viewport (but never < MIN_PAGE_HEIGHT). */
-    function heightScale(viewport) {
-      const target = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
-      return target / viewport.height;
-    }
-
-    /** Renders (or re‑renders) all pages at the current target height. */
+    /** Render all pages at a scale determined solely by height */
     async function render(pdf, container) {
-      container.innerHTML = "";                      // nuke old canvases
-      const baseViewport = await pdf.getPage(1).then(p => p.getViewport({ scale: 1 }));
-      const scale = heightScale(baseViewport);       // same scale for all pages
+      container.innerHTML = "";                       // clear previous canvases
+
+      const base = await pdf.getPage(1).then(p => p.getViewport({ scale: 1 }));
+      const targetHeight = Math.max(window.innerHeight, MIN_PAGE_HEIGHT) - VERTICAL_GUTTER;
+      const scale = targetHeight / base.height;       // height‑driven
+      const pageWidth = base.width * scale;
+
+      container.style.width = `${pageWidth}px`;       // column now matches A4 aspect
       for (let n = 1; n <= pdf.numPages; n++) {
         const page = await pdf.getPage(n);
         const vp   = page.getViewport({ scale });
         const wrap = Object.assign(document.createElement("div"), { className: "page" });
-        const canvas = document.createElement("canvas");
-        canvas.width  = vp.width;
-        canvas.height = vp.height;
+        const canvas = Object.assign(document.createElement("canvas"), {
+          width:  vp.width,
+          height: vp.height
+        });
         wrap.appendChild(canvas);
         container.appendChild(wrap);
         await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
       }
     }
 
-    /** Bootstrap + resize handling */
+    /* bootstrap + smart resize */
     pdfjsLib.getDocument("GoodLife.pdf").promise.then(pdf => {
       const container = document.getElementById("pdf-container");
-      let lastTargetHeight = 0;
-
-      async function maybeRerender() {
-        const target = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
-        if (target !== lastTargetHeight) {           // only if height meaningfully changed
-          lastTargetHeight = target;
-          await render(pdf, container);
-        }
+      let lastHeight = 0;
+      async function maybeRender() {
+        const h = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
+        if (h !== lastHeight) { lastHeight = h; await render(pdf, container); }
       }
-      window.addEventListener("resize", maybeRerender, { passive: true });
-      maybeRerender();
+      window.addEventListener("resize", maybeRender, { passive: true });
+      maybeRender();
     });
   </script>
 </body>
