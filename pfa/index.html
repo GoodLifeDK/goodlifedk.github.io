@@ -1,90 +1,90 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GoodLife PDF Viewer</title>
-  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      background: white;
-      color: #3a3a3a;
-      text-align: center;
-    }
-
-    header {
-      padding: 2rem 1rem 1rem;
-    }
-
-    #logo {
-      max-height: 80px;
-      margin-bottom: 1rem;
-    }
-
-    h1 {
-      font-size: 2rem;
-      margin: 0 0 1rem;
-      color: #2a6673;
-    }
-
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 1rem 3rem;
-    }
-
-    #pdf-viewer {
-      width: 100%;
-      height: 1000px;
-      border: 1px solid #ccc;
-      margin-top: 2rem;
-    }
-
-    footer {
-      font-size: 0.9rem;
-      color: #777;
-      margin-top: 2rem;
-      padding: 2rem 1rem 1rem;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Viewer</title>
+    <script src="https://documentservices.adobe.com/view-sdk/viewer.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e6673;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 1.5rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .logo {
+            height: 40px;
+        }
+        
+        #pdf-container {
+            flex: 1;
+            width: 100%;
+            position: relative;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem 0;
+            }
+            
+            .logo {
+                height: 32px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <img src="52a781eb-17ea-48d2-9df2-201e5f5bae15.png" id="logo" alt="GoodLife Logo" />
-    <h1>GoodLife PDF Viewer</h1>
-  </header>
+    <div class="header">
+        <img src="logo.png" alt="Logo" class="logo">
+    </div>
+    
+    <div id="pdf-container"></div>
 
-  <main>
-    <div id="pdf-viewer"></div>
-  </main>
-
-  <footer>
-    GoodLife Gruppen ApS • Vester Farimagsgade 19, 1606 København V
-  </footer>
-
-  <script>
-    document.addEventListener("adobe_dc_view_sdk.ready", function () {
-      const adobeDCView = new AdobeDC.View({
-        clientId: "1dd7a7f322144b23bdf3db1cfd7f2b69", // Replace with your Adobe key
-        divId: "pdf-viewer",
-      });
-
-      adobeDCView.previewFile({
-        content: {
-          location: {
-            url: "https://documentcloud.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf", // Replace with your real PDF URL
-          },
-        },
-        metaData: {
-          fileName: "GoodLife.pdf",
-        },
-      }, {
-        embedMode: "IN_LINE",
-        defaultViewMode: "FIT_WIDTH"
-      });
-    });
-  </script>
+    <script>
+        document.addEventListener("adobe_dc_view_sdk.ready", function() {
+            const ADOBE_API_KEY = "1dd7a7f322144b23bdf3db1cfd7f2b69"; // Replace with your Adobe PDF Embed API key
+            const PDF_FILE_URL = "document.pdf"; // Replace with your PDF file path
+            
+            // Initialize Adobe DC View
+            const adobeDCView = new AdobeDC.View({
+                clientId: ADOBE_API_KEY,
+                divId: "pdf-container"
+            });
+            
+            // Load and display the PDF
+            adobeDCView.previewFile({
+                content: { location: { url: PDF_FILE_URL } },
+                metaData: { fileName: "Document.pdf" }
+            }, {
+                embedMode: "FULL_WINDOW",
+                showDownloadPDF: false,
+                showPrintPDF: false,
+                showFullScreen: true,
+                showLeftHandPanel: true,
+                dockPageControls: true,
+                defaultViewMode: "FIT_PAGE"
+            });
+        });
+    </script>
 </body>
 </html>
