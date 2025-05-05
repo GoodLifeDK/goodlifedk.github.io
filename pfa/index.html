@@ -2,50 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GoodLife PDF Viewer</title>
-  <!-- Adobe PDF Embed API (modern viewer) -->
-  <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
+  <title>Scroll PDF – paged layout</title>
+
+  <!-- PDF.js (worker is set just below) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
   <style>
-    /* Ultra-clean layout: logo header + scrolling document */
-    html,body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#fff;color:#111;}
-    header{padding:8px 0;text-align:center;border-bottom:1px solid #eee;}
-    .logo{max-height:36px;}
-    /* In‑line viewer grows with content, so width is enough */
-    #pdf-view{width:100%;}
+    /* page‑shadow look + centred column */
+    html,body{margin:0;height:100%;background:#f0f0f0;font-family:system-ui,sans-serif;}
+    #pdf-container{max-width:850px;margin:auto;padding:24px 0;}
+    .page{
+      margin:24px auto;
+      background:#fff;
+      box-shadow:0 3px 12px rgba(0,0,0,.15);
+    }
+    canvas{width:100%;height:auto;display:block;}
   </style>
 </head>
 <body>
-  <header>
-    <!-- Swap src for inline SVG if desired -->
-    <img src="logo.png" alt="Logo" class="logo" />
-  </header>
-
-  <!-- Continuous scroll viewer -->
-  <div id="pdf-view"></div>
+  <div id="pdf-container"></div>
 
   <script>
-    document.addEventListener("adobe_dc_view_sdk.ready", () => {
-      const view = new AdobeDC.View({
-        clientId: "1dd7a7f322144b23bdf3db1cfd7f2b69",
-        divId: "pdf-view",
-      });
+    // Tell PDF.js where to grab its worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-      view.previewFile(
-        {
-          content: { location: { url: "GoodLife.pdf" } },
-          metaData: { fileName: "GoodLife.pdf" },
-        },
-        {
-          /* Minimalist, scroll‑first configuration */
-          embedMode: "IN_LINE",          // continuous scroll: all pages rendered inline
-          defaultViewMode: "FIT_WIDTH",  // edge‑to‑edge width
-          showPageControls: false,        // hide bottom nav
-          showZoomControl: false,
-          showDownloadPDF: false,
-          showPrintPDF: false,
-          showAnnotationTools: false,
-        },
-      );
+    // Load the PDF
+    pdfjsLib.getDocument("GoodLife.pdf").promise.then(async pdf => {
+      const container = document.getElementById("pdf-container");
+
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+
+        /* Fit each page to container width */
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = container.clientWidth / viewport.width;
+        const scaled = page.getViewport({ scale });
+
+        // Create canvas + wrapper
+        const wrap = document.createElement("div");
+        wrap.className = "page";
+        const canvas = document.createElement("canvas");
+        canvas.width = scaled.width;
+        canvas.height = scaled.height;
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        // Render
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: scaled }).promise;
+      }
     });
   </script>
 </body>
