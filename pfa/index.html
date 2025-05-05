@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoodLife PDF Viewer</title>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Helvetica Neue', sans-serif;
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    header {
+      background-color: #E94E3D;
+      color: white;
+      padding: 1.5rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0.5rem 0 0.25rem;
+      font-size: 2rem;
+      letter-spacing: 0.05em;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    #logo {
+      height: 50px;
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    #pdf-viewer {
+      width: 100%;
+      height: 800px;
+      border: 1px solid #ccc;
+      background: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" id="logo" alt="GoodLife Logo" />
+    <h1>GoodLife</h1>
+    <p>Et nyt perspektiv på værdien af dit hjem</p>
+  </header>
+
+  <main>
+    <div id="pdf-viewer"></div>
+  </main>
+
+  <script>
+    document.addEventListener("adobe_dc_view_sdk.ready", function () {
+      const adobeDCView = new AdobeDC.View({
+        clientId: "YOUR_ADOBE_EMBED_API_KEY", // Insert your API key here
+        divId: "pdf-viewer",
+      });
+
+      adobeDCView.previewFile({
+        content: {
+          location: {
+            url: "https://documentcloud.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf",
+          },
+        },
+        metaData: {
+          fileName: "Sample.pdf",
+        },
+      }, {
+        embedMode: "IN_LINE",
+      });
+    });
+  </script>
+</body>
+</html>
