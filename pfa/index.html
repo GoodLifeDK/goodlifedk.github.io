@@ -2,62 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>A4 fit‑height PDF viewer</title>
+  <title>A4 fit‑height, Hi‑DPI PDF viewer</title>
 
+  <!-- PDF.js (worker is set a few lines below) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
+    /* centre the A4 column; grey “gutters” fill the rest */
     html,body{margin:0;height:100%;background:#f0f0f0;font-family:system-ui,sans-serif;}
-    body{display:flex;justify-content:center;}      /* centre the column */
+    body{display:flex;justify-content:center;}
     #pdf-container{padding:24px 0;display:flex;flex-direction:column;align-items:center;}
     .page{margin:24px 0;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.15);}
-    canvas{width:100%;height:auto;display:block;}
+    canvas{display:block;width:100%;height:auto;}   /* CSS size = logical size */
   </style>
 </head>
 <body>
   <div id="pdf-container"></div>
 
   <script>
+    /* Tell PDF.js where its worker lives */
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    const VERTICAL_GUTTER = 24 /*pad top*/ + 24 /*pad bottom*/ + 24 /*page top*/ + 24 /*page bottom*/; // 96 px
-    const MIN_PAGE_HEIGHT = 700;  // don’t let pages get tiny
+    /* ––––– configurable bits ––––– */
+    const VERTICAL_GUTTER = 24 + 24 + 24 + 24; // container pad + page margins = 96 px
+    const MIN_PAGE_HEIGHT = 700;               // don’t let pages get tiny
+    const DPR_CAP         = 2;                 // limit Hi‑DPI render cost (2 ≈ Retina)
 
-    /** Render all pages at a scale determined solely by height */
+    /* Render all pages using a height‑driven scale *and* Hi‑DPI backing store */
     async function render(pdf, container) {
-      container.innerHTML = "";                       // clear previous canvases
+      container.innerHTML = "";                           // clear old canvases
 
       const base = await pdf.getPage(1).then(p => p.getViewport({ scale: 1 }));
       const targetHeight = Math.max(window.innerHeight, MIN_PAGE_HEIGHT) - VERTICAL_GUTTER;
-      const scale = targetHeight / base.height;       // height‑driven
-      const pageWidth = base.width * scale;
+      const logicalScale = targetHeight / base.height;    // fits viewport height
+      const dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      const renderScale = logicalScale * dpr;             // oversample for sharpness
+      const pageWidth   = base.width * logicalScale;      // logical column width
 
-      container.style.width = `${pageWidth}px`;       // column now matches A4 aspect
+      container.style.width = `${pageWidth}px`;           // respect A4 aspect
+
       for (let n = 1; n <= pdf.numPages; n++) {
-        const page = await pdf.getPage(n);
-        const vp   = page.getViewport({ scale });
-        const wrap = Object.assign(document.createElement("div"), { className: "page" });
+        const page  = await pdf.getPage(n);
+        const vp    = page.getViewport({ scale: renderScale });
+
+        // Canvas: full‑res backing store
         const canvas = Object.assign(document.createElement("canvas"), {
           width:  vp.width,
-          height: vp.height
+          height: vp.height,
+          style: `width:${vp.width / dpr}px;height:${vp.height / dpr}px`,
         });
+
+        const wrap = Object.assign(document.createElement("div"), { className: "page" });
         wrap.appendChild(canvas);
         container.appendChild(wrap);
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+
+        const ctx = canvas.getContext("2d", { alpha: false });
+        ctx.imageSmoothingEnabled = false;                // keep glyph edges crisp
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
       }
     }
 
-    /* bootstrap + smart resize */
+    /* Bootstrap + smart resize */
     pdfjsLib.getDocument("GoodLife.pdf").promise.then(pdf => {
       const container = document.getElementById("pdf-container");
-      let lastHeight = 0;
+      let lastLogicalHeight = 0;
+
       async function maybeRender() {
         const h = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
-        if (h !== lastHeight) { lastHeight = h; await render(pdf, container); }
+        if (h !== lastLogicalHeight) {                    // only when height changes
+          lastLogicalHeight = h;
+          await render(pdf, container);
+        }
       }
       window.addEventListener("resize", maybeRender, { passive: true });
-      maybeRender();
+      maybeRender();                                      // initial render
     });
   </script>
 </body>
