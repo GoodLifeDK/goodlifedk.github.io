@@ -2,20 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Scroll PDF – paged layout</title>
+  <title>Fit‑height PDF viewer</title>
 
-  <!-- PDF.js (worker is set just below) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
-    /* page‑shadow look + centred column */
     html,body{margin:0;height:100%;background:#f0f0f0;font-family:system-ui,sans-serif;}
     #pdf-container{max-width:850px;margin:auto;padding:24px 0;}
-    .page{
-      margin:24px auto;
-      background:#fff;
-      box-shadow:0 3px 12px rgba(0,0,0,.15);
-    }
+    .page{margin:24px auto;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.15);}
     canvas{width:100%;height:auto;display:block;}
   </style>
 </head>
@@ -23,34 +17,50 @@
   <div id="pdf-container"></div>
 
   <script>
-    // Tell PDF.js where to grab its worker
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    // Load the PDF
-    pdfjsLib.getDocument("GoodLife.pdf").promise.then(async pdf => {
-      const container = document.getElementById("pdf-container");
+    /** Preferred minimum height for a page (px) */
+    const MIN_PAGE_HEIGHT = 700;
 
+    /** Returns the scale so a page’s height fills the viewport (but never < MIN_PAGE_HEIGHT). */
+    function heightScale(viewport) {
+      const target = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
+      return target / viewport.height;
+    }
+
+    /** Renders (or re‑renders) all pages at the current target height. */
+    async function render(pdf, container) {
+      container.innerHTML = "";                      // nuke old canvases
+      const baseViewport = await pdf.getPage(1).then(p => p.getViewport({ scale: 1 }));
+      const scale = heightScale(baseViewport);       // same scale for all pages
       for (let n = 1; n <= pdf.numPages; n++) {
         const page = await pdf.getPage(n);
-
-        /* Fit each page to container width */
-        const viewport = page.getViewport({ scale: 1 });
-        const scale = container.clientWidth / viewport.width;
-        const scaled = page.getViewport({ scale });
-
-        // Create canvas + wrapper
-        const wrap = document.createElement("div");
-        wrap.className = "page";
+        const vp   = page.getViewport({ scale });
+        const wrap = Object.assign(document.createElement("div"), { className: "page" });
         const canvas = document.createElement("canvas");
-        canvas.width = scaled.width;
-        canvas.height = scaled.height;
+        canvas.width  = vp.width;
+        canvas.height = vp.height;
         wrap.appendChild(canvas);
         container.appendChild(wrap);
-
-        // Render
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport: scaled }).promise;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
       }
+    }
+
+    /** Bootstrap + resize handling */
+    pdfjsLib.getDocument("GoodLife.pdf").promise.then(pdf => {
+      const container = document.getElementById("pdf-container");
+      let lastTargetHeight = 0;
+
+      async function maybeRerender() {
+        const target = Math.max(window.innerHeight, MIN_PAGE_HEIGHT);
+        if (target !== lastTargetHeight) {           // only if height meaningfully changed
+          lastTargetHeight = target;
+          await render(pdf, container);
+        }
+      }
+      window.addEventListener("resize", maybeRerender, { passive: true });
+      maybeRerender();
     });
   </script>
 </body>
